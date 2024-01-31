@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using WeatherReport.Data;
+using WeatherReport.Models;
 using WeatherReport.Services;
-using WeatherReport.Processors;
 
 namespace WeatherReport.Controllers
 {
@@ -8,18 +10,19 @@ namespace WeatherReport.Controllers
     {
         private readonly OpenWeatherApiService _weatherApiService;
         private readonly WeatherPredictionService _weatherForecastService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public WeatherController(OpenWeatherApiService weatherApiService, WeatherPredictionService weatherForecastService)
+        public WeatherController(OpenWeatherApiService weatherApiService, WeatherPredictionService weatherForecastService, IHttpClientFactory httpClientFactory)
         {
             _weatherApiService = weatherApiService;
             _weatherForecastService = weatherForecastService;
+            _httpClientFactory = httpClientFactory;
         }
 
-        [HttpGet("week_forecast")]
-        public async Task<IActionResult> GetForecastOn7DaysByCityName([FromQuery] string cityName)
+        [HttpGet("next-day-forecast")]
+        public async Task<IActionResult> GetNextDayForecastByCityName([FromQuery] string cityName, [FromServices] IOptions<WeatherApiSettings> weatherApiSettings)
         {
-
-             var apiKey = "5fbba6c4a358f17842b403ea6a540bb1";
+             var apiKey = weatherApiSettings.Value.ApiKey;
 
              var geoCodingApiUrl = $"https://api.openweathermap.org/geo/1.0/direct?q={cityName}&limit=1&appid={apiKey}";
              var geoCodingResponse = await _weatherApiService.GetGeocodingDataAsync(geoCodingApiUrl);
@@ -30,22 +33,53 @@ namespace WeatherReport.Controllers
                  return NotFound($"City '{cityName}' not found");
              }
 
-             var historicalData = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow, apiKey);
+             var historicalDataWeek = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow, apiKey);
+             var historicalDataSecondWeek = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-14), DateTime.UtcNow.AddDays(-7), apiKey);
+             var historicalDataThirdWeek = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-21), DateTime.UtcNow.AddDays(-14), apiKey);
+             var historicalData = historicalDataWeek
+                 .Concat(historicalDataSecondWeek)
+                 .Concat(historicalDataThirdWeek)
+                 .ToList();
 
-             if (historicalData == null || !historicalData.Any())
+            if (historicalData == null || !historicalData.Any())
              {
                  return NotFound($"No historical weather data found for '{cityName}'");
              }
 
-             var weekForecast = _weatherForecastService.PredictWeather(historicalData, 7);
+             var weekForecast = _weatherForecastService.PredictWeatherNextDay(historicalDataWeek);
 
              return Ok(weekForecast);
         }
 
-        [HttpGet("two_weeks_forecast")]
-        public async Task<IActionResult> GetForecastOn14DaysByCityName([FromQuery] string cityName)
+        [HttpGet("week-temperature-forecast")]
+        public async Task<IActionResult> GetForecastOn14DaysByCityName([FromQuery] string cityName,  [FromServices] IOptions<WeatherApiSettings> weatherApiSettings)
         {
-            return Ok($"Forecast for {cityName} successfully generated");
+            var apiKey = weatherApiSettings.Value.ApiKey;
+
+            var geoCodingApiUrl = $"https://api.openweathermap.org/geo/1.0/direct?q={cityName}&limit=1&appid={apiKey}";
+            var geoCodingResponse = await _weatherApiService.GetGeocodingDataAsync(geoCodingApiUrl);
+            var location = geoCodingResponse?.FirstOrDefault();
+
+            if (location == null)
+            {
+                return NotFound($"City '{cityName}' not found");
+            }
+
+            var historicalDataWeek = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow, apiKey);
+            var historicalDataSecondWeek = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-14), DateTime.UtcNow.AddDays(-7), apiKey);
+            var historicalDataThirdWeek = await _weatherApiService.GetHistoricalDataAsync(location.Lat, location.Lon, DateTime.UtcNow.AddDays(-21), DateTime.UtcNow.AddDays(-14), apiKey);
+            var historicalData = historicalDataWeek.Concat(historicalDataSecondWeek)
+                .Concat(historicalDataThirdWeek)
+                .ToList();
+
+            if (historicalData == null || !historicalData.Any())
+            {
+                return NotFound($"No historical weather data found for '{cityName}'");
+            }
+
+            var weekTemperatureForecast = _weatherForecastService.PredictWeekTemperature(historicalDataWeek);
+
+            return Ok(weekTemperatureForecast);
         }
     }
 }

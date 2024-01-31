@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using WeatherReport.Models;
+using WeatherReport.Models.ApiResponse;
 
 namespace WeatherReport.Services
 {
@@ -16,7 +16,7 @@ namespace WeatherReport.Services
         {
             try
             {
-                var apiUrl = $"https://history.openweathermap.org/data/2.5/history/city?lat={lat}&lon={lon}&type=hour&start={ToUnixTimestamp(start)}&end={ToUnixTimestamp(end)}&appid={apiKey}";
+                var apiUrl = $"https://history.openweathermap.org/data/2.5/history/city?lat={lat}&lon={lon}&type=hour&start={ToUnixTimestamp(start)}&end={ToUnixTimestamp(end)}&units=metric&appid={apiKey}";
 
                 var response = await _httpClient.GetStringAsync(apiUrl);
 

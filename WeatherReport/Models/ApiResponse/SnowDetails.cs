@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 
-namespace WeatherReport.Models
+namespace WeatherReport.Models.ApiResponse
 {
-    public class RainDetails
+    public class SnowDetails
     {
         [JsonProperty("1h")]
         public double? OneHour { get; set; }

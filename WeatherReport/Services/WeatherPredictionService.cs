@@ -1,6 +1,6 @@
 ﻿using Microsoft.ML;
 using Microsoft.ML.Transforms.TimeSeries;
-using WeatherReport.Models;
+using WeatherReport.Models.ApiResponse;
 using WeatherReport.Models.Prediction;
 using WeatherReport.Processors;
 
@@ -9,117 +9,142 @@ namespace WeatherReport.Services
     public class WeatherPredictionService
     {
         private readonly MLContext _mlContext;
-        private ITransformer _trainedModel;
 
         public WeatherPredictionService()
         {
             _mlContext = new MLContext();
         }
 
-        public IEnumerable<DayPrediction> PredictWeather(IEnumerable<WeatherDataModel> historicalData, int horizonInDays)
+        public List<DayOfWeekPrediction> PredictWeekTemperature(IEnumerable<WeatherDataModel> historicalData)
         {
-            var trainingData = new HistoricalDataProcessor().ProcessHistoricalData(historicalData);
-            TrainModel(trainingData);
+            var trainingData = new HistoricalDataProcessor().ConvertHistoricalDataToTrainingSet(historicalData);
+            var dayTimeData = trainingData.NineAM.Concat(trainingData.TwelvePM)
+                .Concat(trainingData.ThreePM)
+                .Concat(trainingData.SixPM).ToList();
+            var combinedData = dayTimeData.Concat(trainingData.NinePM).Concat(trainingData.TwelveAM)
+                .Concat(trainingData.SixAM);
 
-            var predictions = new List<DayPrediction>();
+            var predictions = new List<DayOfWeekPrediction>();
+            var tempMinValues = PredictTemperature(trainingData.TwelveAM, 7, 3, 7,7).Predictions.ToList();
+            var tempMaxValues = PredictTemperature(trainingData.ThreePM, 7, 3, 7,7).Predictions.ToList();
+            var cloudinessValues = PredictCloudiness(dayTimeData, 7, 5, 14,21).Predictions.ToList();
+            var rainValues = PredictRainProbability(combinedData, 7, 5, 21,21).Predictions.ToList();
 
-            var lastTimestamp = historicalData.Max(data => data.Timestamp);
-
-            for (int day = 1; day <= horizonInDays; day++)
+            for (int i = 0; i < 7; i++)
             {
-                var dayPrediction = new DayPrediction();
-
-                var timestamps = new List<DateTime>
+                var prediction = new DayOfWeekPrediction()
                 {
-                    lastTimestamp.AddHours(6),
-                    lastTimestamp.AddHours(9),
-                    lastTimestamp.AddHours(12),
-                    lastTimestamp.AddHours(15),
-                    lastTimestamp.AddHours(18),
-                    lastTimestamp.AddHours(21),
-                    lastTimestamp.AddHours(24)
+                    TemperatureMin = tempMinValues[i],
+                    TemperatureMax = tempMaxValues[i],
+                    Cloudiness = cloudinessValues[i],
+                    RainPresence = rainValues[i]
                 };
-
-                foreach (var timestamp in timestamps)
-                {
-                    var prediction = Predict(timestamp);
-
-                    SetPredictionBasedOnTimestamp(dayPrediction, timestamp, prediction);
-                }
-
-                predictions.Add(dayPrediction);
-                lastTimestamp = timestamps.Max();
+                predictions.Add(prediction);
             }
-
             return predictions;
         }
 
-        private void SetPredictionBasedOnTimestamp(DayPrediction dayPrediction, DateTime timestamp, ModelOutput prediction)
+        public NextDayPrediction PredictWeatherNextDay(IEnumerable<WeatherDataModel> historicalData)
         {
-            switch (timestamp.Hour)
-            {
-                case 6:
-                    dayPrediction.SixAM = prediction;
-                    break;
-                case 9:
-                    dayPrediction.NineAM = prediction;
-                    break;
-                case 12:
-                    dayPrediction.TwelvePM = prediction;
-                    break;
-                case 15:
-                    dayPrediction.ThreePM = prediction;
-                    break;
-                case 18:
-                    dayPrediction.SixPM = prediction;
-                    break;
-                case 21:
-                    dayPrediction.NinePM = prediction;
-                    break;
-                case 24:
-                    dayPrediction.TwelveAM = prediction;
-                    break;
-            }
-        }
+            var trainingData = new HistoricalDataProcessor().ConvertHistoricalDataToTrainingSet(historicalData);
 
-        private ModelOutput Predict(DateTime timestamp)
-        {
-            var inputData = new TrainingDataModel
+            var prediction = new  NextDayPrediction()
             {
-                Timestamp = timestamp,
+                SixAM = GetPredictionFromTimeSet(trainingData.SixAM),
+                NineAM = GetPredictionFromTimeSet(trainingData.NineAM),
+                TwelvePM = GetPredictionFromTimeSet(trainingData.TwelvePM),
+                ThreePM = GetPredictionFromTimeSet(trainingData.ThreePM),
+                SixPM = GetPredictionFromTimeSet(trainingData.SixPM),
+                NinePM = GetPredictionFromTimeSet(trainingData.NinePM),
+                TwelveAM = GetPredictionFromTimeSet(trainingData.TwelveAM)
             };
-
-            var engine = _trainedModel.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
-
-            var prediction = engine.Predict(inputData);
 
             return prediction;
         }
 
+        public PredictionDataModel GetPredictionFromTimeSet(List<TrainingDataModel> trainingData)
+        {
+            var prediction = new PredictionDataModel()
+            {
+                Temperature = PredictTemperature(trainingData, 1, 3,7,7).Predictions[0],
+                Pressure = PredictPressure(trainingData, 1, 3, 10, 7).Predictions[0],
+                Humidity = PredictHumidity(trainingData, 1, 3, 10, 7).Predictions[0],
+                RainPresence = PredictRainProbability(trainingData,1,3,10,7).Predictions[0],
+                Cloudiness = PredictCloudiness(trainingData, 1, 3, 10,7).Predictions[0],
+                WindSpeed = PredictWindSpeed(trainingData, 1, 3, 10, 7).Predictions[0]
+            };
+            return prediction;
+        }
 
-        private void TrainModel(IEnumerable<TrainingDataModel> trainingData)
+        private ModelOutput PredictTemperature(IEnumerable<TrainingDataModel> trainingData, int horizon, int windowSize, int seriesLength, int trainSize)
         {
             var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
 
-            var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Timestamp")
-                .Append(_mlContext.Transforms.Concatenate("Features",
-                    "Temperature", "Pressure", "WindSpeed", "Humidity", "RainPresence", "SnowPresence"))
-                .Append(_mlContext.Transforms.Conversion.MapKeyToBinaryVector("Features"))
-                .Append(_mlContext.Forecasting.ForecastBySsa("ForecastedValues", "Features", windowSize: 5,
-                    seriesLength: 7,
-                    trainSize: trainingData.Count(),
-                    horizon: 7));
+            var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), nameof(TrainingDataModel.Temperature), windowSize, seriesLength, trainSize, horizon:8, confidenceLevel:0.75f);
+            var model = pipelinePrediction.Fit(dataView);
+            var forecastContext = model.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
+            var forecasts = forecastContext.Predict(horizon);
 
-            var transformer = pipeline.Fit(dataView);
-
-            _trainedModel = transformer;
-
-            SaveModel();
+            return forecasts;
         }
 
-        private void SaveModel()
+        private ModelOutput PredictPressure(IEnumerable<TrainingDataModel> trainingData, int horizon, int windowSize, int seriesLength, int trainSize)
         {
-            _mlContext.Model.Save(_trainedModel, null, "model.zip");
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+
+            var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), nameof(TrainingDataModel.Pressure), windowSize, seriesLength, trainSize, horizon: 8);
+            var model = pipelinePrediction.Fit(dataView);
+            var forecastContext = model.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
+            var forecasts = forecastContext.Predict(horizon);
+
+            return forecasts;
+        }
+
+        private ModelOutput PredictHumidity(IEnumerable<TrainingDataModel> trainingData, int horizon, int windowSize, int seriesLength, int trainSize)
+        {
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+
+            var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), nameof(TrainingDataModel.Humidity), windowSize, seriesLength, trainSize, horizon:8);
+            var model = pipelinePrediction.Fit(dataView);
+            var forecastContext = model.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
+            var forecasts = forecastContext.Predict(horizon);
+
+            return forecasts;
+        }
+
+        private ModelOutput PredictWindSpeed(IEnumerable<TrainingDataModel> trainingData, int horizon, int windowSize, int seriesLength, int trainSize)
+        {
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+
+            var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), nameof(TrainingDataModel.WindSpeed), windowSize, seriesLength, trainSize, horizon: 8);
+            var model = pipelinePrediction.Fit(dataView);
+            var forecastContext = model.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
+            var forecasts = forecastContext.Predict(horizon);
+
+            return forecasts;
+        }
+
+        private ModelOutput PredictCloudiness(IEnumerable<TrainingDataModel> trainingData, int horizon, int windowSize, int seriesLength, int trainSize)
+        {
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+
+            var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), nameof(TrainingDataModel.Cloudiness), windowSize, seriesLength, trainSize, horizon: 8);
+            var model = pipelinePrediction.Fit(dataView);
+            var forecastContext = model.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
+            var forecasts = forecastContext.Predict(horizon);
+
+            return forecasts;
+        }
+        private ModelOutput PredictRainProbability(IEnumerable<TrainingDataModel> trainingData, int horizon, int windowSize, int seriesLength, int trainSize)
+        {
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+            var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), nameof(TrainingDataModel.RainPresence), windowSize, seriesLength, trainSize, horizon: 7, confidenceLevel:0.5f);
+            var model = pipelinePrediction.Fit(dataView);
+            var forecastContext = model.CreateTimeSeriesEngine<TrainingDataModel, ModelOutput>(_mlContext);
+            var forecasts = forecastContext.Predict(horizon);
+
+
+            return forecasts;
         }
     }
 }

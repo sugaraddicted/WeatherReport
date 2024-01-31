@@ -1,4 +1,4 @@
-﻿namespace WeatherReport.Models
+﻿namespace WeatherReport.Models.ApiResponse
 {
     public class LocationDataModel
     {

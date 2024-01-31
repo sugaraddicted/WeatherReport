@@ -1,8 +1,8 @@
 ﻿using Moq;
 using System.Net;
 using Moq.Protected;
-using WeatherReport.Models;
 using WeatherReport.Services;
+using WeatherReport.Models.ApiResponse;
 
 namespace WeatherReport.Tests.Services
 {

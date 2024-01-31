@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using WeatherReport.Data;
+using WeatherReport.Models;
 using WeatherReport.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,9 +10,21 @@ builder.Services.AddHttpClient(); // Register HttpClient without specifying a ty
 builder.Services.AddHttpClient<OpenWeatherApiService>();
 builder.Services.AddSingleton<WeatherPredictionService>();
 
+var conncectionString = builder.Configuration.GetConnectionString("Postgre");
+builder.Services.AddDbContext<DataContext>(options =>
+options.UseNpgsql(conncectionString));
+
+builder.Services.Configure<WeatherApiSettings>(builder.Configuration.GetSection("WeatherApi"));
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddIdentityApiEndpoints<User>()
+    .AddEntityFrameworkStores<DataContext>();
 
 var app = builder.Build();
 
@@ -19,6 +34,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.MapIdentityApi<User>();
 
 app.UseHttpsRedirection();
 
