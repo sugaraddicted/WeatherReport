@@ -9,7 +9,6 @@ namespace WeatherReport.Models.ApiResponse
         public WindDetails Wind { get; set; }
         public CloudDetails Clouds { get; set; }
         public RainDetails? Rain { get; set; }
-        public SnowDetails? Snow { get; set; }
 
         public TrainingDataModel ToTrainingDataModel()
         {
