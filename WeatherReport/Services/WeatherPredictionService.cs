@@ -15,7 +15,7 @@ namespace WeatherReport.Services
             _mlContext = new MLContext();
         }
 
-        public List<DayOfWeekPrediction> PredictWeekTemperature(IEnumerable<WeatherDataModel> historicalData)
+        public List<DayOfWeekPrediction> GetWeekPrediction(IEnumerable<WeatherDataModel> historicalData)
         {
             var trainingData = new HistoricalDataProcessor().ConvertHistoricalDataToTrainingSet(historicalData);
             var dayTimeData = trainingData.NineAM.Concat(trainingData.TwelvePM)
@@ -50,19 +50,19 @@ namespace WeatherReport.Services
 
             var prediction = new  NextDayPrediction()
             {
-                SixAM = GetPredictionFromTimeSet(trainingData.SixAM),
-                NineAM = GetPredictionFromTimeSet(trainingData.NineAM),
-                TwelvePM = GetPredictionFromTimeSet(trainingData.TwelvePM),
-                ThreePM = GetPredictionFromTimeSet(trainingData.ThreePM),
-                SixPM = GetPredictionFromTimeSet(trainingData.SixPM),
-                NinePM = GetPredictionFromTimeSet(trainingData.NinePM),
-                TwelveAM = GetPredictionFromTimeSet(trainingData.TwelveAM)
+                SixAM = GetPredictionForTimeOfDay(trainingData.SixAM),
+                NineAM = GetPredictionForTimeOfDay(trainingData.NineAM),
+                TwelvePM = GetPredictionForTimeOfDay(trainingData.TwelvePM),
+                ThreePM = GetPredictionForTimeOfDay(trainingData.ThreePM),
+                SixPM = GetPredictionForTimeOfDay(trainingData.SixPM),
+                NinePM = GetPredictionForTimeOfDay(trainingData.NinePM),
+                TwelveAM = GetPredictionForTimeOfDay(trainingData.TwelveAM)
             };
 
             return prediction;
         }
 
-        public PredictionDataModel GetPredictionFromTimeSet(List<TrainingDataModel> trainingData)
+        public PredictionDataModel GetPredictionForTimeOfDay(List<TrainingDataModel> trainingData)
         {
             var prediction = new PredictionDataModel()
             {
@@ -76,8 +76,9 @@ namespace WeatherReport.Services
             return prediction;
         }
 
-        private ModelOutput Predict(IEnumerable<TrainingDataModel> trainingData, string inputOutputColumnName,int horizon, int windowSize, int seriesLength, int trainSize)
+         public ModelOutput Predict(IEnumerable<TrainingDataModel> trainingData, string inputOutputColumnName,int horizon, int windowSize, int seriesLength, int trainSize)
         {
+
             var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
             var pipelinePrediction = _mlContext.Forecasting.ForecastBySsa(nameof(ModelOutput.Predictions), inputOutputColumnName, windowSize, seriesLength, trainSize, horizon: 7, confidenceLevel:0.5f);
             var model = pipelinePrediction.Fit(dataView);
