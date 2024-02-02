@@ -77,6 +77,11 @@ namespace WeatherReport.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .HasColumnType("text");
 
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasMaxLength(21)
+                        .HasColumnType("character varying(21)");
+
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
@@ -117,7 +122,9 @@ namespace WeatherReport.Migrations
 
                     b.ToTable("IdentityUser<Guid>");
 
-                    b.UseTptMappingStrategy();
+                    b.HasDiscriminator<string>("Discriminator").HasValue("IdentityUser<Guid>");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
@@ -234,7 +241,7 @@ namespace WeatherReport.Migrations
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityUser<System.Guid>");
 
-                    b.ToTable("User", (string)null);
+                    b.HasDiscriminator().HasValue("User");
                 });
 
             modelBuilder.Entity("WeatherReport.Models.UserCity", b =>
@@ -254,15 +261,6 @@ namespace WeatherReport.Migrations
                     b.Navigation("City");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("WeatherReport.Models.User", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser<System.Guid>", null)
-                        .WithOne()
-                        .HasForeignKey("WeatherReport.Models.User", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("WeatherReport.Models.City", b =>

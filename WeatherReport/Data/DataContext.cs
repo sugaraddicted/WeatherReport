@@ -17,8 +17,7 @@ namespace WeatherReport.Data
             modelBuilder.HasPostgresExtension("uuid-ossp");
 
             modelBuilder.Entity<User>()
-                .HasBaseType<IdentityUser<Guid>>()
-                .ToTable("User");
+                .HasBaseType<IdentityUser<Guid>>();
 
             modelBuilder.Entity<UserCity>().HasKey(uc => new
             {
