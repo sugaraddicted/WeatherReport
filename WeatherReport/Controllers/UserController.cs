@@ -24,18 +24,15 @@ namespace WeatherReport.Controllers
         public async Task<ActionResult<List<string>>> GetUsersCities()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            var cities = await _context.UserCities.Where(uc => uc.UserId == user.Id).Select(uc => uc.City).ToListAsync();
+
+            if (cities == null)
             {
                 return NotFound();
             }
 
-            var cities = new List<City>();
-            foreach (var userCity in user.UserCities)
-            {
-                cities.Add(userCity.City);
-            }
-
-            return Ok(cities);
+            var result = cities.Select(c => c.Name).ToList();
+            return Ok(result);
         }
 
         [HttpPost("add-city")]
@@ -46,8 +43,8 @@ namespace WeatherReport.Controllers
             {
                 return NotFound();
             }
-
             City city = _context.Cities.Where(c => c.Name == cityName).FirstOrDefault();
+
             if (city == null)
             {
                 city = new City() { Name = cityName };
@@ -55,14 +52,18 @@ namespace WeatherReport.Controllers
                 _context.SaveChanges();
             }
 
-            _context.UserCities.Add(
-                new UserCity()
+            UserCity userCity = _context.UserCities.Where(uc => uc.City.Name == cityName).FirstOrDefault();
+
+            if (userCity == null)
+            {
+                userCity = new UserCity()
                 {
                     UserId = user.Id,
                     CityId = city.Id
-                });
-
-            _context.SaveChanges();
+                };
+                _context.UserCities.Add(userCity);
+                _context.SaveChanges();
+            }
 
             var result = await _userManager.UpdateAsync(user);
 
