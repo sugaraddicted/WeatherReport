@@ -21,8 +21,6 @@ namespace WeatherReport.Services
             var dayTimeData = trainingData.NineAM.Concat(trainingData.TwelvePM)
                 .Concat(trainingData.ThreePM)
                 .Concat(trainingData.SixPM).ToList();
-            var combinedData = dayTimeData.Concat(trainingData.NinePM).Concat(trainingData.TwelveAM)
-                .Concat(trainingData.SixAM);
 
             var predictions = new List<DayOfWeekPrediction>();
             var tempMinValues = Predict(trainingData.TwelveAM, nameof(TrainingDataModel.Temperature), 7, 3, 7, 7).Predictions.ToList();
