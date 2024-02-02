@@ -1,5 +1,4 @@
-﻿using Microsoft.ML.Data;
-
+﻿
 namespace WeatherReport.Models.Prediction
 {
     public class PredictionDataModel{
@@ -8,6 +7,5 @@ namespace WeatherReport.Models.Prediction
         public float WindSpeed { get; set; }
         public float Humidity { get; set; }
         public float Cloudiness { get; set; }
-        public float RainPresence { get; set; }
     }
 }

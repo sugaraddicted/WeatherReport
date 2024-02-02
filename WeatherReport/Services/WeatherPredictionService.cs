@@ -28,7 +28,6 @@ namespace WeatherReport.Services
             var tempMinValues = Predict(trainingData.TwelveAM, nameof(TrainingDataModel.Temperature), 7, 3, 7, 7).Predictions.ToList();
             var tempMaxValues = Predict(trainingData.ThreePM, nameof(TrainingDataModel.Temperature), 7, 3, 7, 7).Predictions.ToList();
             var cloudinessValues = Predict(dayTimeData, nameof(TrainingDataModel.Cloudiness), 7, 5, 14, 21).Predictions.ToList();
-            var rainValues = Predict(combinedData, nameof(TrainingDataModel.RainPresence), 7, 5, 21, 21).Predictions.ToList();
 
             for (int i = 0; i < 7; i++)
             {
@@ -37,7 +36,6 @@ namespace WeatherReport.Services
                     TemperatureMin = tempMinValues[i],
                     TemperatureMax = tempMaxValues[i],
                     Cloudiness = cloudinessValues[i],
-                    RainPresence = rainValues[i]
                 };
                 predictions.Add(prediction);
             }
@@ -69,7 +67,6 @@ namespace WeatherReport.Services
                 Temperature = Predict(trainingData, nameof(TrainingDataModel.Temperature), 1, 3, 7, 7).Predictions[0],
                 Pressure = Predict(trainingData, nameof(TrainingDataModel.Pressure), 1, 3, 10, 7).Predictions[0],
                 Humidity = Predict(trainingData, nameof(TrainingDataModel.Humidity), 1, 3, 10, 7).Predictions[0],
-                RainPresence = Predict(trainingData, nameof(TrainingDataModel.RainPresence),1,3,10,7).Predictions[0],
                 Cloudiness = Predict(trainingData, nameof(TrainingDataModel.Cloudiness), 1, 3, 10, 7).Predictions[0],
                 WindSpeed = Predict(trainingData, nameof(TrainingDataModel.WindSpeed), 1, 3, 10, 7).Predictions[0]
             };

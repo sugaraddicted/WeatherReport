@@ -46,7 +46,7 @@ namespace WeatherReport.Controllers
                  return NotFound($"No historical weather data found for '{cityName}'");
              }
 
-             var weekForecast = _weatherForecastService.PredictWeatherNextDay(historicalDataWeek);
+             var weekForecast = _weatherForecastService.PredictWeatherNextDay(historicalData);
 
              return Ok(weekForecast);
         }
