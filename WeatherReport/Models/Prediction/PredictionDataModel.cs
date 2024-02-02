@@ -7,5 +7,6 @@ namespace WeatherReport.Models.Prediction
         public float WindSpeed { get; set; }
         public float Humidity { get; set; }
         public float Cloudiness { get; set; }
+        public string WeatherType { get; set; }
     }
 }
