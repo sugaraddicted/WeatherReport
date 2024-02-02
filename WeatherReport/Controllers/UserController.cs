@@ -24,7 +24,7 @@ namespace WeatherReport.Controllers
         public async Task<ActionResult<List<string>>> GetUsersCities()
         {
             var user = await _userManager.GetUserAsync(User);
-            var cities = await _context.UserCities.Where(uc => uc.UserId == user.Id).Select(uc => uc.City).ToListAsync();
+            var cities = _context.UserCities.Where(uc => uc.UserId == user.Id).Select(uc => uc.City).ToList();
 
             if (cities == null)
             {
