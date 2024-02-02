@@ -9,6 +9,7 @@ namespace WeatherReport.Processors
         {
             var trainingSet = new TrainingSet
             {
+                ThreeAM = new List<TrainingDataModel>(),
                 SixAM = new List<TrainingDataModel>(),
                 NineAM = new List<TrainingDataModel>(),
                 TwelvePM = new List<TrainingDataModel>(),
@@ -20,6 +21,7 @@ namespace WeatherReport.Processors
 
             var hourToListMap = new Dictionary<int, List<TrainingDataModel>>
             {
+                { 3, trainingSet.ThreeAM },
                 { 6, trainingSet.SixAM },
                 { 9, trainingSet.NineAM },
                 { 12, trainingSet.TwelvePM },

@@ -29,12 +29,22 @@ namespace WeatherReport.Services
 
             for (int i = 0; i < 7; i++)
             {
+
                 var prediction = new DayOfWeekPrediction()
                 {
                     TemperatureMin = tempMinValues[i],
                     TemperatureMax = tempMaxValues[i],
                     Cloudiness = cloudinessValues[i],
                 };
+
+                if (prediction.Cloudiness > 50)
+                {
+                    prediction.WeatherType = "sunny";
+                }
+                else
+                {
+                    prediction.WeatherType = "cloudy";
+                }
                 predictions.Add(prediction);
             }
             return predictions;
@@ -46,6 +56,7 @@ namespace WeatherReport.Services
 
             var prediction = new  NextDayPrediction()
             {
+                ThreeAM = GetPredictionForTimeOfDay(trainingData.ThreeAM),
                 SixAM = GetPredictionForTimeOfDay(trainingData.SixAM),
                 NineAM = GetPredictionForTimeOfDay(trainingData.NineAM),
                 TwelvePM = GetPredictionForTimeOfDay(trainingData.TwelvePM),
@@ -68,6 +79,16 @@ namespace WeatherReport.Services
                 Cloudiness = Predict(trainingData, nameof(TrainingDataModel.Cloudiness), 1, 3, 10, 7).Predictions[0],
                 WindSpeed = Predict(trainingData, nameof(TrainingDataModel.WindSpeed), 1, 3, 10, 7).Predictions[0]
             };
+
+            if ( prediction.Cloudiness > 50)
+            {
+                prediction.WeatherType = "sunny";
+            }
+            else
+            {
+                prediction.WeatherType = "cloudy";
+            }
+
             return prediction;
         }
 

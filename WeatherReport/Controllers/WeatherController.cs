@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using WeatherReport.Data;
-using WeatherReport.Models;
 using WeatherReport.Services;
 
 namespace WeatherReport.Controllers
@@ -10,13 +9,11 @@ namespace WeatherReport.Controllers
     {
         private readonly OpenWeatherApiService _weatherApiService;
         private readonly WeatherPredictionService _weatherForecastService;
-        private readonly IHttpClientFactory _httpClientFactory;
 
-        public WeatherController(OpenWeatherApiService weatherApiService, WeatherPredictionService weatherForecastService, IHttpClientFactory httpClientFactory)
+        public WeatherController(OpenWeatherApiService weatherApiService, WeatherPredictionService weatherForecastService)
         {
             _weatherApiService = weatherApiService;
             _weatherForecastService = weatherForecastService;
-            _httpClientFactory = httpClientFactory;
         }
 
         [HttpGet("next-day-forecast")]
@@ -41,7 +38,7 @@ namespace WeatherReport.Controllers
                  .Concat(historicalDataThirdWeek)
                  .ToList();
 
-            if (historicalData == null || !historicalData.Any())
+             if (historicalData == null || !historicalData.Any())
              {
                  return NotFound($"No historical weather data found for '{cityName}'");
              }
