@@ -41,18 +41,5 @@ namespace WeatherReport.Processors
 
             return trainingSet;
         }
-
-        public List<TrainingDataModel> ConvertHistoricalDataToTrainingModelList(IEnumerable<WeatherDataModel> historicalData)
-        {
-            var trainingDataModels = new List<TrainingDataModel>();
-
-            foreach (var dataPoint in historicalData)
-            {
-                var trainingData = dataPoint.ToTrainingDataModel();
-                trainingDataModels.Add(trainingData);
-            }
-
-            return trainingDataModels;
-        }
     }
 }
