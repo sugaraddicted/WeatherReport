@@ -1,0 +1,37 @@
+
+services:
+  server:
+    image: weather_report
+    build:
+      context: .
+      target: final
+    ports:
+      - 3000:3000
+    tty: true
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    tty: true
+    image: postgres
+    restart: always
+    user: postgres
+    secrets:
+      - db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=myPassword1!
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  db-data:
+secrets:
+  db-password:
+    file: db/password.txt
